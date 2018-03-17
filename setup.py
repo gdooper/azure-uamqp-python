@@ -18,6 +18,7 @@ except ImportError:
     USE_CYTHON = False
 
 supress_link_flags = os.environ.get("UAMQP_SUPPRESS_LINK_FLAGS", False)
+debug_mode = os.environ.get("UAMQP_DEBUG_BUILD", False)
 is_win = sys.platform.startswith('win')
 is_mac = sys.platform.startswith('darwin')
 
@@ -31,10 +32,13 @@ cwd = os.path.abspath('.')
 
 # Headers
 
+pyx_inc_dir = os.path.join(cwd, "src")
 pxd_inc_dir = os.path.join(cwd, "src", "vendor", "inc")
 sys.path.insert(0, pxd_inc_dir)
 
 include_dirs = [
+    # c_uamqp
+    pyx_inc_dir,
     pxd_inc_dir,
     # azure-c-shared-utility inc
     "./src/vendor/azure-c-shared-utility/pal/inc",
@@ -48,27 +52,31 @@ include_dirs = [
 
 c_uamqp_src = None
 if USE_CYTHON:
-    content_includes = ""
+    c_uamqp_src = []
+    #content_includes = ""
     for f in os.listdir("./src"):
         if is_win and 'openssl' in f:
             continue
         elif not is_win and 'schannel' in f:
             continue
         if f.endswith(".pyx"):
-            print("Adding {}".format(f))
-            content_includes += "include \"src/" + f + "\"\n"
-    c_uamqp_src = os.path.join("uamqp", "c_uamqp.pyx")
-    with open(c_uamqp_src, 'w') as lib_file:
-        lib_file.write(content_includes)
+            c_uamqp_src.append("src/{}".format(f))
+    #         print("Adding {}".format(f))
+    #         content_includes += "include \"src/" + f + "\"\n"
+    # c_uamqp_src = os.path.join("uamqp", "c_uamqp.pyx")
+    #with open(c_uamqp_src, 'w') as lib_file:
+    #    lib_file.write(content_includes)
 else:
-    c_uamqp_src = "uamqp/c_uamqp.c"
+    c_uamqp_src = ["uamqp/c_uamqp.c"]
 
 
 # Libraries and extra compile args
 
 kwargs = {}
+if debug_mode:
+    kwargs['define_macros'] = [('CYTHON_TRACE', '1')]
+
 if is_win:
-    kwargs['extra_compile_args'] = ['/openmp']
     kwargs['libraries'] = [
         'AdvAPI32',
         'Crypt32',
@@ -79,7 +87,11 @@ if is_win:
         'WSock32',
         'WS2_32']
 else:
-    kwargs['extra_compile_args'] = ['-g', '-O0', "-std=gnu99", "-fPIC"]
+    if debug_mode:
+        kwargs['extra_compile_args'] = ['-O0', '-g']
+    else:
+        kwargs['extra_compile_args'] = ['-O2']
+    kwargs['extra_compile_args'].extend(['-std=gnu99', '-fPIC'])
     # SSL before crypto matters: https://bugreports.qt.io/browse/QTBUG-62692
     if not supress_link_flags:
         kwargs['libraries'] = ['ssl', 'crypto', 'uuid']
@@ -142,9 +154,8 @@ sources = [
     "./src/vendor/azure-uamqp-c/src/saslclientio.c",
     "./src/vendor/azure-uamqp-c/src/sasl_anonymous.c",
     "./src/vendor/azure-uamqp-c/src/session.c",
-    "./src/vendor/azure-uamqp-c/src/socket_listener_win32.c" if is_win else "./src/vendor/azure-uamqp-c/src/socket_listener_berkeley.c",
-    c_uamqp_src,
-]
+    "./src/vendor/azure-uamqp-c/src/socket_listener_win32.c" if is_win else "./src/vendor/azure-uamqp-c/src/socket_listener_berkeley.c"
+] + c_uamqp_src
 
 if is_win:
     sources.extend([
@@ -172,7 +183,12 @@ with open('HISTORY.rst', encoding='utf-8') as f:
     history = f.read()
 
 if USE_CYTHON:
-    extensions = cythonize(extensions)
+    directives = {}
+    if debug_mode:
+        directives['linetrace'] = True
+    extensions = cythonize(
+        extensions,
+        compiler_directives=directives)
 
 setup(
     name='uamqp',

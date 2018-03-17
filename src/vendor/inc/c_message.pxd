@@ -15,11 +15,11 @@ cdef extern from "azure_uamqp_c/messaging.h":
     c_amqpvalue.AMQP_VALUE messaging_create_source(const char* address)
     c_amqpvalue.AMQP_VALUE messaging_create_target(const char* address)
 
-    c_amqpvalue.AMQP_VALUE messaging_delivery_received(stdint.uint32_t section_number, stdint.uint64_t section_offset) nogil
-    c_amqpvalue.AMQP_VALUE messaging_delivery_accepted() nogil
-    c_amqpvalue.AMQP_VALUE messaging_delivery_rejected(const char* error_condition, const char* error_description) nogil
-    c_amqpvalue.AMQP_VALUE messaging_delivery_released() nogil
-    c_amqpvalue.AMQP_VALUE messaging_delivery_modified(bint delivery_failed, bint undeliverable_here, c_amqp_definitions.fields message_annotations) nogil
+    c_amqpvalue.AMQP_VALUE messaging_delivery_received(stdint.uint32_t section_number, stdint.uint64_t section_offset)
+    c_amqpvalue.AMQP_VALUE messaging_delivery_accepted()
+    c_amqpvalue.AMQP_VALUE messaging_delivery_rejected(const char* error_condition, const char* error_description)
+    c_amqpvalue.AMQP_VALUE messaging_delivery_released()
+    c_amqpvalue.AMQP_VALUE messaging_delivery_modified(bint delivery_failed, bint undeliverable_here, c_amqp_definitions.fields message_annotations)
 
 
 cdef extern from "azure_uamqp_c/message.h":

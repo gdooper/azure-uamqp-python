@@ -173,6 +173,4 @@ cdef void on_connection_state_changed(void* context, c_connection.CONNECTION_STA
 
 
 cdef void on_io_error(void* context):
-    if <void*>context != NULL:
-        context_obj = <object>context
-        context_obj._io_error()
+    _logger.debug("IO Error occurred")

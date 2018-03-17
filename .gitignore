@@ -107,6 +107,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+src/*.c
+uamqp/*.c
 uamqp/c_uamqp.c
 uamqp/c_uamqp.pyx
 tests/test_dont_merge.py
