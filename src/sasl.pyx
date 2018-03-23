@@ -8,8 +8,11 @@
 import logging
 
 # C imports
+cimport base
+cimport xio
 cimport c_xio
 cimport c_sasl_mechanism
+cimport c_amqp_definitions
 
 
 _logger = logging.getLogger(__name__)
@@ -47,7 +50,7 @@ cpdef saslplain_get_interface():
     return interface
 
 
-cpdef get_sasl_mechanism(SASLMechanismInterfaceDescription interface=None):
+cpdef get_sasl_mechanism(SASLMechanismInterfaceDescription interface):
     if interface is None:
         interface = _get_sasl_mechanism_interface()
     sasl_mechanism = SASLMechanism()
@@ -63,9 +66,7 @@ cpdef get_plain_sasl_mechanism(SASLMechanismInterfaceDescription interface, SASL
 
 
 
-cdef class SASLMechanism(StructBase):
-
-    cdef c_sasl_mechanism.SASL_MECHANISM_HANDLE _c_value
+cdef class SASLMechanism(base.StructBase):
 
     def __cinit__(self):
         pass
@@ -74,35 +75,33 @@ cdef class SASLMechanism(StructBase):
         _logger.debug("Deallocating {}".format(self.__class__.__name__))
         self.destroy()
 
-    cdef _create(self):
+    cdef _validate(self):
         if <void*>self._c_value is NULL:
             self._memory_error()
 
     cpdef destroy(self):
         if <void*>self._c_value is not NULL:
             _logger.debug("Destroying {}".format(self.__class__.__name__))
-            c_sasl_mechanism.saslmechanism_destroy(self._c_value)
+            c_sasl_mechanism.saslmechanism_destroy(<c_sasl_mechanism.SASL_MECHANISM_HANDLE>self._c_value)
             self._c_value = <c_sasl_mechanism.SASL_MECHANISM_HANDLE>NULL
 
     cdef wrap(self, c_sasl_mechanism.SASL_MECHANISM_HANDLE value):
         self.destroy()
         self._c_value = value
-        self._create()
+        self._validate()
 
     cdef create(self, SASLMechanismInterfaceDescription sasl_mechanism_interface_description):
         self.destroy()
         self._c_value = c_sasl_mechanism.saslmechanism_create(sasl_mechanism_interface_description._c_value, NULL)
-        self._create()
+        self._validate()
 
     cdef create_with_parameters(self, SASLMechanismInterfaceDescription sasl_mechanism_interface_description, void *parameters):
         self.destroy()
         self._c_value = c_sasl_mechanism.saslmechanism_create(sasl_mechanism_interface_description._c_value, parameters)
-        self._create()
+        self._validate()
 
 
 cdef class SASLMechanismInterfaceDescription:
-
-    cdef c_sasl_mechanism.SASL_MECHANISM_INTERFACE_DESCRIPTION* _c_value
 
     def __cinit__(self):
         pass
@@ -113,22 +112,20 @@ cdef class SASLMechanismInterfaceDescription:
 
 cdef class SASLClientIOConfig:
 
-    cdef c_sasl_mechanism.SASLCLIENTIO_CONFIG _c_value
-
     def __cinit__(self):
         self._c_value = c_sasl_mechanism.SASLCLIENTIO_CONFIG(<c_xio.XIO_HANDLE>NULL, <c_sasl_mechanism.SASL_MECHANISM_HANDLE>NULL)
 
     @property
     def underlying_io(self):  # TODO: Deletes object in wrapper?
-        _xio = XIO()
+        _xio = xio.XIO()
         _xio.wrap(self._c_value.underlying_io)
         return _xio
 
     @underlying_io.setter
-    def underlying_io(self, XIO value):
+    def underlying_io(self, xio.XIO value):
         if <void*>value._c_value is NULL:
             raise ValueError("UnderLying IO must not be NULL")
-        self._c_value.underlying_io = value._c_value
+        self._c_value.underlying_io = <c_xio.XIO_HANDLE>value._c_value
 
     @property
     def sasl_mechanism(self):  # TODO: Deletes object in wrapper?
@@ -144,8 +141,6 @@ cdef class SASLClientIOConfig:
 
 
 cdef class SASLPlainConfig:
-
-    cdef c_sasl_mechanism.SASL_PLAIN_CONFIG _c_value
 
     def __cinit__(self):
         self._c_value = c_sasl_mechanism.SASL_PLAIN_CONFIG(NULL, NULL, NULL)

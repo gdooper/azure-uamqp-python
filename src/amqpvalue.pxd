@@ -4,14 +4,17 @@
 # license information.
 #--------------------------------------------------------------------------
 
-cimport c_amqpvalue
 
 from libc cimport stdint
+cimport base
+cimport c_amqpvalue
 
 
-cdef class AMQPValue:
-    cdef wrap(self)
+cdef class AMQPValue(base.StructBase):
+    cdef c_amqpvalue.AMQP_VALUE _c_value
+    cdef wrap(self, c_amqpvalue.AMQP_VALUE value)
     cpdef destroy(self)
+    cdef _validate(self)
     cpdef get_encoded_size(self)
     cpdef clone(self)
     cpdef get_map(self)

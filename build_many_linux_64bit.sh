@@ -3,6 +3,8 @@ set -e
 
 # To execute this script:
 # docker run --rm -v $PWD:/data pyca/cryptography-manylinux1:x86_64 /data/build_many_linux_64bit.sh
+# Test with:
+# docker run --rm -it -v %cd%:/data --entrypoint="/bin/bash" fnndsc/ubuntu-python3
 
 export UAMQP_VERSION="0.1.0b1"
 

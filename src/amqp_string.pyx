@@ -8,6 +8,7 @@
 import logging
 
 # C imports
+cimport base
 cimport c_strings
 
 
@@ -27,9 +28,9 @@ cpdef create_string_from_value(value):
     return new_string
 
 
-cdef class AMQPString(StructBase):
+cdef class AMQPString(base.StructBase):
 
-    cdef c_strings.STRING_HANDLE _c_value
+    #cdef c_strings.STRING_HANDLE _c_value
 
     def __cinit__(self):
         self._c_value = c_strings.STRING_new()

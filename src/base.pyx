@@ -39,7 +39,7 @@ cdef class StructBase:
 
 cdef class TickCounter:
 
-    cdef c_utils.TICK_COUNTER_HANDLE _c_value
+    #cdef c_utils.TICK_COUNTER_HANDLE _c_value
 
     def __cinit__(self):
         self._c_value = c_utils.tickcounter_create()

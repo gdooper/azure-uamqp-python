@@ -9,24 +9,28 @@ import logging
 import asyncio
 
 # C imports
+cimport session
+cimport message
+cimport base
 cimport c_amqp_management
 cimport c_message
+cimport c_session
 
 
 _logger = logging.getLogger(__name__)
 
 
-cpdef create_management_operation(cSession session, management_node):
+cpdef create_management_operation(session.cSession session_c, management_node):
     mgr_op = cManagementOperation()
     if isinstance(management_node, str):
         management_node = management_node.encode('utf-8')
-    mgr_op.create(session, <const char*>management_node)
+    mgr_op.create(session_c, <const char*>management_node)
     return mgr_op
 
 
-cdef class cManagementOperation(StructBase):
+cdef class cManagementOperation(base.StructBase):
 
-    cdef c_amqp_management.AMQP_MANAGEMENT_HANDLE _c_value
+    #cdef c_amqp_management.AMQP_MANAGEMENT_HANDLE _c_value
 
     def __cinit__(self):
         pass
@@ -50,9 +54,9 @@ cdef class cManagementOperation(StructBase):
         self._c_value = value
         self._validate()
 
-    cdef create(self, cSession session, const char* management_node):
+    cdef create(self, session.cSession session_c, const char* management_node):
         self.destroy()
-        self._c_value = c_amqp_management.amqp_management_create(<c_session.SESSION_HANDLE>session._c_value, management_node)
+        self._c_value = c_amqp_management.amqp_management_create(<c_session.SESSION_HANDLE>session_c._c_value, management_node)
         self._validate()
 
     cpdef set_trace(self, bint value):
@@ -77,7 +81,7 @@ cdef class cManagementOperation(StructBase):
         if c_amqp_management.amqp_management_close(self._c_value) != 0:
             self._value_error("Unable to close management link.")
 
-    cpdef execute(self, const char* operation, const char* type, locales, cMessage message, callback_context):
+    cpdef execute(self, const char* operation, const char* type, locales, message.cMessage request, callback_context):
         cdef const char* c_locales
         cdef void *context
         if locales is None:
@@ -88,7 +92,13 @@ cdef class cManagementOperation(StructBase):
             context = <void*>NULL
         else:
             context = <void*>callback_context
-        if c_amqp_management.amqp_management_execute_operation_async(self._c_value, operation, type, c_locales, message._c_value, on_execute_operation_complete, context) != 0:
+        if c_amqp_management.amqp_management_execute_operation_async(
+                self._c_value,
+                operation, type,
+                c_locales,
+                <c_message.MESSAGE_HANDLE>request._c_value,
+                on_execute_operation_complete,
+                context) != 0:
             self._value_error("Unable to execute management operation.")
 
 
@@ -106,13 +116,13 @@ cdef void on_amqp_management_error(void* context):
         context_obj = <object>context
         context_obj._management_operation_error()
 
-cdef void on_execute_operation_complete(void* context, c_amqp_management.AMQP_MANAGEMENT_EXECUTE_OPERATION_RESULT_TAG execute_operation_result, unsigned int status_code, const char* status_description, c_message.MESSAGE_HANDLE message):
+cdef void on_execute_operation_complete(void* context, c_amqp_management.AMQP_MANAGEMENT_EXECUTE_OPERATION_RESULT_TAG execute_operation_result, unsigned int status_code, const char* status_description, c_message.MESSAGE_HANDLE response):
     cdef c_message.MESSAGE_HANDLE cloned
     description = "None" if <void*>status_description == NULL else status_description
     _logger.debug("Management op complete: {}, status code: {}, description: {}".format(execute_operation_result, status_code, description))
     if context != NULL:
-        cloned = c_message.message_clone(message)
-        wrapped_message = message_factory(cloned)
+        cloned = c_message.message_clone(response)
+        wrapped_message = message.message_factory(cloned)
         context_obj = <object>context
         if hasattr(context_obj, "_management_operation_complete_async"):
             asyncio.ensure_future(

@@ -8,6 +8,8 @@
 import logging
 
 # C imports
+cimport tlsio
+cimport sasl
 cimport c_xio
 cimport c_sasl_mechanism
 
@@ -15,13 +17,13 @@ cimport c_sasl_mechanism
 _logger = logging.getLogger(__name__)
 
 
-cpdef xio_from_tlsioconfig(IOInterfaceDescription io_desc, TLSIOConfig io_config):
+cpdef xio_from_tlsioconfig(IOInterfaceDescription io_desc, tlsio.TLSIOConfig io_config):
     xio = XIO()
     xio.create(io_desc._c_value, &io_config._c_value)
     return xio
 
 
-cpdef xio_from_saslioconfig(SASLClientIOConfig io_config):
+cpdef xio_from_saslioconfig(sasl.SASLClientIOConfig io_config):
     cdef const  c_xio.IO_INTERFACE_DESCRIPTION* interface
     interface = c_sasl_mechanism.saslclientio_get_interface_description()
     if <void*>interface == NULL:
@@ -64,8 +66,6 @@ cdef class XIO(StructBase):
 
 
 cdef class IOInterfaceDescription:
-
-    cdef c_xio.IO_INTERFACE_DESCRIPTION* _c_value
 
     def __cinit__(self):
         pass

@@ -11,6 +11,7 @@ import logging
 # C imports
 cimport c_amqp_definitions
 cimport c_message_receiver
+cimport c_message_sender
 cimport c_cbs
 cimport c_xio
 cimport c_amqp_management

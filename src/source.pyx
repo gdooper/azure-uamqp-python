@@ -8,6 +8,8 @@
 import logging
 
 # C imports
+cimport base
+cimport amqpvalue
 cimport c_amqp_definitions
 cimport c_amqpvalue
 
@@ -20,9 +22,7 @@ cpdef create_source():
     return source
 
 
-cdef class cSource(StructBase):
-
-    cdef c_amqp_definitions.SOURCE_HANDLE _c_value
+cdef class cSource(base.StructBase):
 
     def __cinit__(self):
         self._c_value = c_amqp_definitions.source_create()
@@ -39,7 +39,7 @@ cdef class cSource(StructBase):
     cpdef destroy(self):
         if <void*>self._c_value is not NULL:
             _logger.debug("Destroying {}".format(self.__class__.__name__))
-            c_amqp_definitions.source_destroy(self._c_value)
+            c_amqp_definitions.source_destroy(<c_amqp_definitions.SOURCE_HANDLE>self._c_value)
             self._c_value = <c_amqp_definitions.SOURCE_HANDLE>NULL
 
     cdef wrap(self, c_amqp_definitions.SOURCE_HANDLE value):
@@ -50,7 +50,7 @@ cdef class cSource(StructBase):
     @property
     def value(self):
         cdef c_amqpvalue.AMQP_VALUE _value
-        _value = c_amqp_definitions.amqpvalue_create_source(self._c_value)
+        _value = c_amqp_definitions.amqpvalue_create_source(<c_amqp_definitions.SOURCE_HANDLE>self._c_value)
         if <void*>_value == NULL:
             self._null_error("Failed to create source.")
         return value_factory(_value)
@@ -58,22 +58,22 @@ cdef class cSource(StructBase):
     @property
     def address(self):
         cdef c_amqpvalue.AMQP_VALUE _value
-        if c_amqp_definitions.source_get_address(self._c_value, &_value) != 0:
+        if c_amqp_definitions.source_get_address(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, &_value) != 0:
             self._value_error("Failed to get source address")
         if <void*>_value == NULL:
             return None
         return _value.value
 
     @address.setter
-    def address(self, AMQPValue value):
+    def address(self, amqpvalue.AMQPValue value):
         cdef c_amqpvalue.AMQP_VALUE c_address
-        if c_amqp_definitions.source_set_address(self._c_value, <c_amqpvalue.AMQP_VALUE>value._c_value) != 0:
+        if c_amqp_definitions.source_set_address(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, <c_amqpvalue.AMQP_VALUE>value._c_value) != 0:
             self._value_error("Failed to set source address")
 
     @property
     def durable(self):
         cdef c_amqp_definitions.terminus_durability _value
-        if c_amqp_definitions.source_get_durable(self._c_value, &_value) != 0:
+        if c_amqp_definitions.source_get_durable(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, &_value) != 0:
             self._value_error("Failed to get source durable")
         if <void*>_value == NULL:
             return None
@@ -81,13 +81,13 @@ cdef class cSource(StructBase):
 
     @durable.setter
     def durable(self, c_amqp_definitions.terminus_durability value):
-        if c_amqp_definitions.source_set_durable(self._c_value, value) != 0:
+        if c_amqp_definitions.source_set_durable(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, value) != 0:
             self._value_error("Failed to set source durable")
 
     @property
     def expiry_policy(self):
         cdef c_amqp_definitions.terminus_expiry_policy _value
-        if c_amqp_definitions.source_get_expiry_policy(self._c_value, &_value) != 0:
+        if c_amqp_definitions.source_get_expiry_policy(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, &_value) != 0:
             self._value_error("Failed to get source expiry_policy")
         if <void*>_value == NULL:
             return None
@@ -95,13 +95,13 @@ cdef class cSource(StructBase):
 
     @expiry_policy.setter
     def expiry_policy(self, c_amqp_definitions.terminus_expiry_policy value):
-        if c_amqp_definitions.source_set_expiry_policy(self._c_value, value) != 0:
+        if c_amqp_definitions.source_set_expiry_policy(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, value) != 0:
             self._value_error("Failed to set source expiry_policy")
 
     @property
     def timeout(self):
         cdef c_amqp_definitions.seconds _value
-        if c_amqp_definitions.source_get_timeout(self._c_value, &_value) != 0:
+        if c_amqp_definitions.source_get_timeout(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, &_value) != 0:
             self._value_error("Failed to get source timeout")
         if <void*>_value == NULL:
             return None
@@ -109,13 +109,13 @@ cdef class cSource(StructBase):
 
     @timeout.setter
     def timeout(self, c_amqp_definitions.seconds value):
-        if c_amqp_definitions.source_set_timeout(self._c_value, value) != 0:
+        if c_amqp_definitions.source_set_timeout(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, value) != 0:
             self._value_error("Failed to set source timeout")
 
     @property
     def dynamic(self):
         cdef bint _value
-        if c_amqp_definitions.source_get_dynamic(self._c_value, &_value) != 0:
+        if c_amqp_definitions.source_get_dynamic(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, &_value) != 0:
             self._value_error("Failed to get source dynamic")
         if <void*>_value == NULL:
             return None
@@ -123,13 +123,13 @@ cdef class cSource(StructBase):
 
     @dynamic.setter
     def dynamic(self, bint value):
-        if c_amqp_definitions.source_set_dynamic(self._c_value, value) != 0:
+        if c_amqp_definitions.source_set_dynamic(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, value) != 0:
             self._value_error("Failed to set source dynamic")
 
     @property
     def dynamic_node_properties(self):
         cdef c_amqp_definitions.node_properties _value
-        if c_amqp_definitions.source_get_dynamic_node_properties(self._c_value, &_value) != 0:
+        if c_amqp_definitions.source_get_dynamic_node_properties(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, &_value) != 0:
             self._value_error("Failed to get source dynamic_node_properties")
         if <void*>_value == NULL:
             return None
@@ -137,13 +137,13 @@ cdef class cSource(StructBase):
 
     @dynamic_node_properties.setter
     def dynamic_node_properties(self, cFields value):
-        if c_amqp_definitions.source_set_dynamic_node_properties(self._c_value, <c_amqp_definitions.node_properties>value._c_value) != 0:
+        if c_amqp_definitions.source_set_dynamic_node_properties(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, <c_amqp_definitions.node_properties>value._c_value) != 0:
             self._value_error("Failed to set source dynamic_node_properties")
 
     @property
     def distribution_mode(self):
         cdef const char* _value
-        if c_amqp_definitions.source_get_distribution_mode(self._c_value, &_value) != 0:
+        if c_amqp_definitions.source_get_distribution_mode(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, &_value) != 0:
             self._value_error("Failed to get source distribution_mode")
         if <void*>_value == NULL:
             return None
@@ -151,19 +151,19 @@ cdef class cSource(StructBase):
 
     @distribution_mode.setter
     def distribution_mode(self, const char* value):
-        if c_amqp_definitions.source_set_distribution_mode(self._c_value, value) != 0:
+        if c_amqp_definitions.source_set_distribution_mode(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, value) != 0:
             self._value_error("Failed to set source distribution_mode")
 
     @property
     def filter_set(self):
         cdef c_amqp_definitions.filter_set _value
-        if c_amqp_definitions.source_get_filter(self._c_value, &_value) != 0:
+        if c_amqp_definitions.source_get_filter(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, &_value) != 0:
             self._value_error("Failed to get source filter_set")
         if <void*>_value == NULL:
             return None
         return value_factory(_value)
 
     @filter_set.setter
-    def filter_set(self, AMQPValue value):
-        if c_amqp_definitions.source_set_filter(self._c_value, <c_amqp_definitions.filter_set>value._c_value) != 0:
+    def filter_set(self, amqpvalue.AMQPValue value):
+        if c_amqp_definitions.source_set_filter(<c_amqp_definitions.SOURCE_HANDLE>self._c_value, <c_amqp_definitions.filter_set>value._c_value) != 0:
             self._value_error("Failed to set source filter_set")

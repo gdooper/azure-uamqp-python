@@ -8,6 +8,8 @@
 import logging
 
 # C imports
+cimport amqp_string
+cimport xio
 cimport c_strings
 cimport c_platform
 cimport c_xio
@@ -30,17 +32,17 @@ cpdef platform_deinit():
 cpdef get_info():
     cdef c_strings.STRING_HANDLE str_info
     str_info = c_platform.platform_get_platform_info()
-    info = AMQPString()
+    info = amqp_string.AMQPString()
     info.wrap(str_info)
     return info
 
 
-cpdef get_default_tlsio():
-    cdef const c_xio.IO_INTERFACE_DESCRIPTION* io_desc
-    io_desc = c_platform.platform_get_default_tlsio()
-    if <void*>io_desc == NULL:
-        raise ValueError("Failed to create tlsio description.")
+#cpdef get_default_tlsio():
+#    cdef c_xio.IO_INTERFACE_DESCRIPTION* io_desc
+#    io_desc = c_platform.platform_get_default_tlsio()
+#    if <void*>io_desc == NULL:
+#        raise ValueError("Failed to create tlsio description.")
 
-    interface = IOInterfaceDescription()
-    interface.wrap(io_desc)
-    return interface
+#    interface = xio.IOInterfaceDescription()
+#    interface.wrap(io_desc)
+#    return interface

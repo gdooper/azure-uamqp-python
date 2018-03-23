@@ -9,24 +9,25 @@ import logging
 
 # C imports
 from libc cimport stdint
-
+cimport base
+cimport link
 cimport c_message_sender
 cimport c_link
 cimport c_async_operation
+cimport c_message
+cimport c_amqp_definitions
 
 
 _logger = logging.getLogger(__name__)
 
 
-cpdef create_message_sender(cLink link, callback_context):
+cpdef create_message_sender(link.cLink link_c, callback_context):
     sender = cMessageSender()
-    sender.create(<c_link.LINK_HANDLE>link._c_value, on_message_sender_state_changed, <void*>callback_context)
+    sender.create(<c_link.LINK_HANDLE>link_c._c_value, on_message_sender_state_changed, <void*>callback_context)
     return sender
 
 
-cdef class cMessageSender(StructBase):
-
-    cdef c_message_sender.MESSAGE_SENDER_HANDLE _c_value
+cdef class cMessageSender(base.StructBase):
 
     def __cinit__(self):
         pass
@@ -70,8 +71,8 @@ cdef class cMessageSender(StructBase):
         self._c_value = c_message_sender.messagesender_create(link, on_message_sender_state_changed, context)
         self._create()
 
-    cpdef send(self, cMessage message, c_amqp_definitions.tickcounter_ms_t timeout, callback_context):
-        operation = c_message_sender.messagesender_send_async(self._c_value, <c_message.MESSAGE_HANDLE>message._c_value, on_message_send_complete, <void*>callback_context, timeout)
+    cpdef send(self, message.cMessage request, c_amqp_definitions.tickcounter_ms_t timeout, callback_context):
+        operation = c_message_sender.messagesender_send_async(self._c_value, <c_message.MESSAGE_HANDLE>request._c_value, on_message_send_complete, <void*>callback_context, timeout)
         if <void*>operation is NULL:
             self._memory_error()
 
@@ -91,7 +92,7 @@ cdef void on_message_sender_state_changed(void* context, c_message_sender.MESSAG
     context_obj._state_changed(previous_state, new_state)
 
 
-cdef create_message_sender_with_callback(cLink link,c_message_sender.ON_MESSAGE_SENDER_STATE_CHANGED callback, void* callback_context):
+cdef create_message_sender_with_callback(link.cLink link,c_message_sender.ON_MESSAGE_SENDER_STATE_CHANGED callback, void* callback_context):
     sender = cMessageSender()
     sender.create(<c_link.LINK_HANDLE>link._c_value, callback, callback_context)
     return sender

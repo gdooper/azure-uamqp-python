@@ -10,16 +10,20 @@ from enum import Enum
 
 # C imports
 from libc cimport stdint
+cimport xio
+cimport base
+cimport amqpvalue
 cimport c_connection
 cimport c_xio
+cimport c_amqp_definitions
 
 
 _logger = logging.getLogger(__name__)
 
 
-cpdef create_connection(XIO sasl_client, const char* hostname, const char* container_id, callback_context):
-    conn = Connection()
-    conn.create(sasl_client._c_value, hostname, container_id, on_connection_state_changed, on_io_error, <void*>callback_context)
+cpdef create_connection(xio.XIO sasl_client, const char* hostname, const char* container_id, callback_context):
+    conn = cConnection()
+    conn.create(<c_xio.XIO_HANDLE>sasl_client._c_value, hostname, container_id, on_connection_state_changed, on_io_error, <void*>callback_context)
     return conn
 
 
@@ -42,9 +46,9 @@ class ConnectionState(Enum):
     UNKNOWN = 999
 
 
-cdef class Connection(StructBase):
+cdef class cConnection(base.StructBase):
 
-    cdef c_connection.CONNECTION_HANDLE _c_value
+    #cdef c_connection.CONNECTION_HANDLE _c_value
 
     def __cinit__(self):
         pass
@@ -59,7 +63,7 @@ cdef class Connection(StructBase):
     def __exit__(self, *args):
         self.destroy()
 
-    cdef _create(self):
+    cdef _validate(self):
         if <void*>self._c_value is NULL:
             self._memory_error()
 
@@ -72,12 +76,12 @@ cdef class Connection(StructBase):
     cdef wrap(self, c_connection.CONNECTION_HANDLE value):
         self.destroy()
         self._c_value = value
-        self._create()
+        self._validate()
 
     cdef create(self, c_xio.XIO_HANDLE io, const char* hostname, const char* container_id, c_connection.ON_CONNECTION_STATE_CHANGED on_connection_state_changed, c_xio.ON_IO_ERROR on_io_error, void* callback_context):
         self.destroy()
         self._c_value = c_connection.connection_create2(io, hostname, container_id, NULL, NULL, on_connection_state_changed, callback_context, on_io_error, callback_context)
-        self._create()
+        self._validate()
 
     cpdef open(self):
         if c_connection.connection_open(self._c_value) != 0:
@@ -144,12 +148,12 @@ cdef class Connection(StructBase):
         if c_connection.connection_get_properties(self._c_value, &_value) == 0:
             if <void*>_value == NULL:
                 return None
-            return value_factory(_value)
+            return amqpvalue.value_factory(_value)
         else:
             self._value_error()
 
     @properties.setter
-    def properties(self, AMQPValue value):
+    def properties(self, amqpvalue.AMQPValue value):
         if c_connection.connection_set_properties(self._c_value, <c_amqp_definitions.fields>value._c_value) != 0:
             self._value_error()
 

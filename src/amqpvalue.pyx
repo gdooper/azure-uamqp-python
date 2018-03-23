@@ -13,7 +13,7 @@ import uuid
 from libc cimport stdint
 from libc.stdlib cimport malloc, realloc, free
 from libc.string cimport memcpy
-
+cimport base
 cimport cython
 cimport c_amqpvalue
 cimport c_amqp_definitions
@@ -260,10 +260,10 @@ cpdef described_value(AMQPValue descriptor, AMQPValue value):
     return new_obj
 
 
-cdef class AMQPValue(StructBase):
+cdef class AMQPValue(base.StructBase):
 
     _type = AMQPType.NullValue
-    cdef c_amqpvalue.AMQP_VALUE _c_value
+    #cdef c_amqpvalue.AMQP_VALUE _c_value
 
     def __cinit__(self):
         pass

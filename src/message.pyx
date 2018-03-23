@@ -10,7 +10,11 @@ import logging
 
 # C imports
 from libc cimport stdint
-
+cimport base
+cimport amqpvalue
+cimport header
+cimport properties
+cimport annotations
 cimport c_message
 cimport c_amqp_definitions
 cimport c_amqpvalue
@@ -38,9 +42,7 @@ cpdef create_message():
     return new_message
 
 
-cdef class cMessage(StructBase):
-
-    cdef c_message.MESSAGE_HANDLE _c_value
+cdef class cMessage(base.StructBase):
 
     def __cinit__(self):
         pass
@@ -49,29 +51,29 @@ cdef class cMessage(StructBase):
         _logger.debug("Deallocating {}".format(self.__class__.__name__))
         self.destroy()
 
-    cdef _create(self):
+    cdef _validate(self):
         if <void*>self._c_value is NULL:
             self._memory_error()
 
     cpdef destroy(self):
         if <void*>self._c_value is not NULL:
             _logger.debug("Destorying {}".format(self.__class__.__name__))
-            c_message.message_destroy(self._c_value)
+            c_message.message_destroy(<c_message.MESSAGE_HANDLE>self._c_value)
             self._c_value = <c_message.MESSAGE_HANDLE>NULL
 
     cdef wrap(self, c_message.MESSAGE_HANDLE value):
         self.destroy()
         self._c_value = value
-        self._create()
+        self._validate()
 
     cdef create(self):
         self.destroy()
         self._c_value = c_message.message_create()
-        self._create()
+        self._validate()
 
     cpdef clone(self):
         cdef c_message.MESSAGE_HANDLE value
-        value = c_message.message_clone(self._c_value)
+        value = c_message.message_clone(<c_message.MESSAGE_HANDLE>self._c_value)
         if <void*>value == NULL:
             self._value_error()
         return message_factory(value)
@@ -79,119 +81,112 @@ cdef class cMessage(StructBase):
     @property
     def header(self):
         cdef c_amqp_definitions.HEADER_HANDLE value
-        if c_message.message_get_header(self._c_value, &value) == 0:
+        if c_message.message_get_header(<c_message.MESSAGE_HANDLE>self._c_value, &value) == 0:
             if <void*>value == NULL:
                 return None
-            new_obj = cHeader()
+            new_obj = header.cHeader()
             new_obj.wrap(value)
             return new_obj
         else:
             self._value_error()
 
-    @header.setter
-    def header(self, cHeader value):
-        if c_message.message_set_header(
-            self._c_value, <c_amqp_definitions.HEADER_HANDLE>value._c_value) != 0:
-                self._value_error()
-
     @property
     def delivery_annotations(self):
         cdef c_amqp_definitions.delivery_annotations value
-        if c_message.message_get_delivery_annotations(self._c_value, &value) == 0:
+        if c_message.message_get_delivery_annotations(<c_message.MESSAGE_HANDLE>self._c_value, &value) == 0:
             if <void*>value == NULL:
                 return None
-            new_obj = cDeliveryAnnotations()
+            new_obj = annotations.cDeliveryAnnotations()
             new_obj.wrap(value)
             return new_obj
         else:
             self._value_error()
 
     @delivery_annotations.setter
-    def delivery_annotations(self, cDeliveryAnnotations value):
+    def delivery_annotations(self, annotations.cDeliveryAnnotations value):
         if c_message.message_set_delivery_annotations(
-            self._c_value, <c_amqp_definitions.delivery_annotations>value._c_value) != 0:
+            <c_message.MESSAGE_HANDLE>self._c_value,
+            <c_amqp_definitions.delivery_annotations>value._c_value) != 0:
                 self._value_error()
 
     @property
     def message_annotations(self):
         cdef c_amqp_definitions.message_annotations value
-        if c_message.message_get_message_annotations(self._c_value, &value) == 0:
+        if c_message.message_get_message_annotations(<c_message.MESSAGE_HANDLE>self._c_value, &value) == 0:
             if <void*>value == NULL:
                 return None
-            new_obj = cMessageAnnotations()
+            new_obj = annotations.cMessageAnnotations()
             new_obj.wrap(value)
             return new_obj
         else:
             self._value_error()
 
     @message_annotations.setter
-    def message_annotations(self, cMessageAnnotations value):
+    def message_annotations(self, annotations.cMessageAnnotations value):
         if c_message.message_set_message_annotations(
-            self._c_value, <c_amqp_definitions.message_annotations>value._c_value) != 0:
+            <c_message.MESSAGE_HANDLE>self._c_value,
+            <c_amqp_definitions.message_annotations>value._c_value) != 0:
                 self._value_error()
 
     @property
     def properties(self):
         cdef c_amqp_definitions.PROPERTIES_HANDLE value
-        if c_message.message_get_properties(self._c_value, &value) == 0:
+        if c_message.message_get_properties(<c_message.MESSAGE_HANDLE>self._c_value, &value) == 0:
             if <void*>value == NULL:
                 return None
-            new_obj = cProperties()
+            new_obj = properties.cProperties()
             new_obj.wrap(value)
             return new_obj
         else:
             self._value_error()
 
     @properties.setter
-    def properties(self, cProperties value):
+    def properties(self, properties.cProperties value):
         if value is None:  # TODO: We should do this throughout
             if c_message.message_set_properties(
-                self._c_value, <c_amqp_definitions.PROPERTIES_HANDLE>NULL) != 0:
+                <c_message.MESSAGE_HANDLE>self._c_value,
+                <c_amqp_definitions.PROPERTIES_HANDLE>NULL) != 0:
                     self._value_error()
         if c_message.message_set_properties(
-            self._c_value, <c_amqp_definitions.PROPERTIES_HANDLE>value._c_value) != 0:
+            <c_message.MESSAGE_HANDLE>self._c_value,
+            <c_amqp_definitions.PROPERTIES_HANDLE>value._c_value) != 0:
                 self._value_error()
 
     @property
     def application_properties(self):
         cdef c_amqpvalue.AMQP_VALUE value
-        if c_message.message_get_application_properties(self._c_value, &value) == 0:
+        if c_message.message_get_application_properties(<c_message.MESSAGE_HANDLE>self._c_value, &value) == 0:
             if <void*>value == NULL:
                 return None
-            new_obj = cApplicationProperties()
+            new_obj = annotations.cApplicationProperties()
             new_obj.wrap(value)
             return new_obj
         else:
             self._value_error()
 
     @application_properties.setter
-    def application_properties(self, AMQPValue value):
+    def application_properties(self, amqpvalue.AMQPValue value):
         if c_message.message_set_application_properties(
-            self._c_value, <c_amqpvalue.AMQP_VALUE>value._c_value) != 0:
+            <c_message.MESSAGE_HANDLE>self._c_value,
+            <c_amqpvalue.AMQP_VALUE>value._c_value) != 0:
                 self._value_error()
 
     @property
     def footer(self):
         cdef c_amqp_definitions.annotations value
-        if c_message.message_get_footer(self._c_value, &value) == 0:
+        if c_message.message_get_footer(<c_message.MESSAGE_HANDLE>self._c_value, &value) == 0:
             if <void*>value == NULL:
                 return None
-            new_obj = cFooter()
+            new_obj = annotations.cFooter()
             new_obj.wrap(value)
             return new_obj
         else:
             self._value_error()
 
-    @footer.setter
-    def footer(self, cFooter value):
-        if c_message.message_set_footer(
-            self._c_value, <c_amqp_definitions.annotations>value._c_value) != 0:
-                self._value_error()
-
     @property
     def body_type(self):
         cdef c_message.MESSAGE_BODY_TYPE_TAG value
-        if c_message.message_get_body_type(self._c_value, &value) == 0:
+        if c_message.message_get_body_type(<c_message.MESSAGE_HANDLE>self._c_value, &value) == 0:
             return MessageBodyType(value)
         else:
             self._value_error()
@@ -199,14 +194,14 @@ cdef class cMessage(StructBase):
     @property
     def message_format(self):
         cdef stdint.uint32_t value
-        if c_message.message_get_message_format(self._c_value, &value) == 0:
+        if c_message.message_get_message_format(<c_message.MESSAGE_HANDLE>self._c_value, &value) == 0:
             return value
         else:
             self._value_error()
 
     @message_format.setter
     def message_format(self, stdint.uint32_t value):
-        if c_message.message_set_message_format(self._c_value, value) != 0:
+        if c_message.message_set_message_format(<c_message.MESSAGE_HANDLE>self._c_value, value) != 0:
                 self._value_error()
 
     cpdef add_body_data(self, bytes value):
@@ -215,48 +210,48 @@ cdef class cMessage(StructBase):
         bytes = value[:length]
         _binary.length = length
         _binary.bytes = bytes
-        if c_message.message_add_body_amqp_data(self._c_value, _binary) != 0:
+        if c_message.message_add_body_amqp_data(<c_message.MESSAGE_HANDLE>self._c_value, _binary) != 0:
             self._value_error()
 
     cpdef get_body_data(self, size_t index):
         cdef c_message.BINARY_DATA _value
-        if c_message.message_get_body_amqp_data_in_place(self._c_value, index, &_value) == 0:
+        if c_message.message_get_body_amqp_data_in_place(<c_message.MESSAGE_HANDLE>self._c_value, index, &_value) == 0:
             return _value.bytes[:_value.length]
         else:
             self._value_error()
 
     cpdef count_body_data(self):
         cdef size_t body_count
-        if c_message.message_get_body_amqp_data_count(self._c_value, &body_count) == 0:
+        if c_message.message_get_body_amqp_data_count(<c_message.MESSAGE_HANDLE>self._c_value, &body_count) == 0:
             return body_count
         else:
             self._value_error()
 
-    cpdef set_body_value(self, AMQPValue value):
-        if c_message.message_set_body_amqp_value(self._c_value, <c_amqpvalue.AMQP_VALUE>value._c_value) != 0:
+    cpdef set_body_value(self, amqpvalue.AMQPValue value):
+        if c_message.message_set_body_amqp_value(<c_message.MESSAGE_HANDLE>self._c_value, <c_amqpvalue.AMQP_VALUE>value._c_value) != 0:
             self._value_error()
 
     cpdef get_body_value(self):
         cdef c_amqpvalue.AMQP_VALUE _value
-        if c_message.message_get_body_amqp_value_in_place(self._c_value, &_value) == 0:
-            return value_factory(_value)
+        if c_message.message_get_body_amqp_value_in_place(<c_message.MESSAGE_HANDLE>self._c_value, &_value) == 0:
+            return amqpvalue.value_factory(_value)
         else:
             self._value_error()
 
-    cpdef add_body_sequence(self, AMQPValue sequence):
-        if c_message.message_add_body_amqp_sequence(self._c_value, <c_amqpvalue.AMQP_VALUE>sequence._c_value) != 0:
+    cpdef add_body_sequence(self, amqpvalue.AMQPValue sequence):
+        if c_message.message_add_body_amqp_sequence(<c_message.MESSAGE_HANDLE>self._c_value, <c_amqpvalue.AMQP_VALUE>sequence._c_value) != 0:
             self._value_error()
 
     cpdef get_body_sequence(self, size_t index):
         cdef c_amqpvalue.AMQP_VALUE _value
-        if c_message.message_get_body_amqp_sequence_in_place(self._c_value, index, &_value) == 0:
-            return value_factory(_value)
+        if c_message.message_get_body_amqp_sequence_in_place(<c_message.MESSAGE_HANDLE>self._c_value, index, &_value) == 0:
+            return amqpvalue.value_factory(_value)
         else:
             self._value_error()
 
     cpdef count_body_sequence(self):
         cdef size_t body_count
-        if c_message.message_get_body_amqp_sequence_count(self._c_value, &body_count) == 0:
+        if c_message.message_get_body_amqp_sequence_count(<c_message.MESSAGE_HANDLE>self._c_value, &body_count) == 0:
             return body_count
         else:
             self._value_error()
@@ -270,7 +265,7 @@ cdef class Messaging:
         _value = c_message.messaging_create_source(address)
         if <void*>_value == NULL:
             raise MemoryError("Failed to allocate memory for messaging source.")
-        return value_factory(_value)
+        return amqpvalue.value_factory(_value)
 
     @staticmethod
     def create_target(const char* address):
@@ -278,7 +273,7 @@ cdef class Messaging:
         _value = c_message.messaging_create_target(address)
         if <void*>_value == NULL:
             raise MemoryError("Failed to allocate memory for messaging target.")
-        return value_factory(_value)
+        return amqpvalue.value_factory(_value)
 
     @staticmethod
     def delivery_received(stdint.uint32_t section_number, stdint.uint64_t section_offset):
@@ -286,7 +281,7 @@ cdef class Messaging:
         _value = c_message.messaging_delivery_received(section_number, section_offset)
         if <void*>_value == NULL:
             raise MemoryError("Failed to allocate memory for received delivery.")
-        return value_factory(_value)
+        return amqpvalue.value_factory(_value)
 
     @staticmethod
     def delivery_accepted():
@@ -294,7 +289,7 @@ cdef class Messaging:
         _value = c_message.messaging_delivery_accepted()
         if <void*>_value == NULL:
             raise MemoryError("Failed to allocate memory for accepted delivery.")
-        return value_factory(_value)
+        return amqpvalue.value_factory(_value)
 
     @staticmethod
     def delivery_rejected(const char* error_condition, const char* error_description):
@@ -302,7 +297,7 @@ cdef class Messaging:
         _value = c_message.messaging_delivery_rejected(error_condition, error_description)
         if <void*>_value == NULL:
             raise MemoryError("Failed to allocate memory for rejected delivery.")
-        return value_factory(_value)
+        return amqpvalue.value_factory(_value)
 
     @staticmethod
     def delivery_released():
@@ -310,16 +305,16 @@ cdef class Messaging:
         _value = c_message.messaging_delivery_released()
         if <void*>_value == NULL:
             raise MemoryError("Failed to allocate memory for released delivery.")
-        return value_factory(_value)
+        return amqpvalue.value_factory(_value)
 
     @staticmethod
-    def delivery_modified(bint delivery_failed, bint undeliverable_here, cFields message_annotations):
+    def delivery_modified(bint delivery_failed, bint undeliverable_here, annotations.cFields message_annotations):
         _logger.debug("delivery modified: {} {}".format(delivery_failed, undeliverable_here))
         cdef c_amqpvalue.AMQP_VALUE _value
         _value = c_message.messaging_delivery_modified(delivery_failed, undeliverable_here, <c_amqp_definitions.fields>message_annotations._c_value)
         if <void*>_value == NULL:
             raise MemoryError("Failed to allocate memory for modified delivery.")
-        return value_factory(_value)
+        return amqpvalue.value_factory(_value)
 
 
 cpdef size_t get_encoded_message_size(cMessage message):

@@ -9,7 +9,8 @@ import logging
 
 # C imports
 from libc cimport stdint
-
+cimport base
+cimport amqpvalue
 cimport c_amqpvalue
 cimport c_amqp_definitions
 cimport c_utils
@@ -19,7 +20,7 @@ _logger = logging.getLogger(__name__)
 
 
 cdef annotations_factory(c_amqpvalue.AMQP_VALUE value):
-    wrapped = value_factory(value)
+    wrapped = amqpvalue.value_factory(value)
     if c_amqp_definitions.is_delivery_annotations_type_by_descriptor(<c_amqp_definitions.delivery_annotations>value):
         new_obj = create_delivery_annotations(wrapped)
     elif c_amqp_definitions.is_message_annotations_type_by_descriptor(<c_amqp_definitions.message_annotations>value):
@@ -31,45 +32,43 @@ cdef annotations_factory(c_amqpvalue.AMQP_VALUE value):
     return new_obj
 
 
-cpdef create_annotations(AMQPValue value):
+cpdef create_annotations(amqpvalue.AMQPValue value):
     annotations = cAnnotations()
     annotations.create(value)
     return annotations
 
 
-cpdef create_application_properties(AMQPValue value):
+cpdef create_application_properties(amqpvalue.AMQPValue value):
     annotations = cApplicationProperties()
     annotations.create(value)
     return annotations
 
 
-cpdef create_delivery_annotations(AMQPValue value):
+cpdef create_delivery_annotations(amqpvalue.AMQPValue value):
     annotations = cDeliveryAnnotations()
     annotations.create(value)
     return annotations
 
 
-cpdef create_message_annotations(AMQPValue value):
+cpdef create_message_annotations(amqpvalue.AMQPValue value):
     annotations = cMessageAnnotations()
     annotations.create(value)
     return annotations
 
 
-cpdef create_fields(AMQPValue value):
+cpdef create_fields(amqpvalue.AMQPValue value):
     annotations = cFields()
     annotations.create(value)
     return annotations
 
 
-cpdef create_footer(AMQPValue value):
+cpdef create_footer(amqpvalue.AMQPValue value):
     annotations = cFooter()
     annotations.create(value)
     return annotations
 
 
-cdef class cAnnotations(StructBase):
-
-    cdef c_amqpvalue.AMQP_VALUE _c_value
+cdef class cAnnotations(base.StructBase):
 
     def __cinit__(self):
         pass
@@ -93,7 +92,7 @@ cdef class cAnnotations(StructBase):
         value = c_amqpvalue.amqpvalue_clone(<c_amqpvalue.AMQP_VALUE>self._c_value)
         if <void*>value == NULL:
             self._value_error()
-        amqp_value = value_factory(value)
+        amqp_value = amqpvalue.value_factory(value)
         return cAnnotations(amqp_value)
 
     cpdef get_encoded_size(self):
@@ -102,7 +101,7 @@ cdef class cAnnotations(StructBase):
             self._value_error("Failed to get encoded size.")
         return length
 
-    cpdef create(self, AMQPValue value):
+    cpdef create(self, amqpvalue.AMQPValue value):
         self.destroy()
         self._c_value = c_amqp_definitions.amqpvalue_create_annotations(<c_amqpvalue.AMQP_VALUE>value._c_value)
         self._validate()
@@ -114,7 +113,7 @@ cdef class cAnnotations(StructBase):
 
     @property
     def value(self):
-        return value_factory(self._c_value)
+        return amqpvalue.value_factory(self._c_value)
 
     @property
     def map(self):
@@ -122,7 +121,7 @@ cdef class cAnnotations(StructBase):
         if c_amqpvalue.amqpvalue_get_map(self._c_value, &value) == 0:
             if <void*>value == NULL:
                 return None
-            return value_factory(value).value
+            return amqpvalue.value_factory(value).value
         else:
             #self._value_error("Failed to get map.")
             return None
@@ -130,7 +129,7 @@ cdef class cAnnotations(StructBase):
 
 cdef class cApplicationProperties(cAnnotations):
 
-    cpdef create(self, AMQPValue value):
+    cpdef create(self, amqpvalue.AMQPValue value):
         self.destroy()
         self._c_value = c_amqp_definitions.amqpvalue_create_application_properties(
             <c_amqp_definitions.application_properties>value._c_value)
@@ -139,7 +138,7 @@ cdef class cApplicationProperties(cAnnotations):
 
 cdef class cDeliveryAnnotations(cAnnotations):
 
-    cpdef create(self, AMQPValue value):
+    cpdef create(self, amqpvalue.AMQPValue value):
         self.destroy()
         self._c_value = c_amqp_definitions.amqpvalue_create_delivery_annotations(
             <c_amqp_definitions.delivery_annotations>value._c_value)
@@ -148,7 +147,7 @@ cdef class cDeliveryAnnotations(cAnnotations):
 
 cdef class cMessageAnnotations(cAnnotations):
 
-    cpdef create(self, AMQPValue value):
+    cpdef create(self, amqpvalue.AMQPValue value):
         self.destroy()
         self._c_value = c_amqp_definitions.amqpvalue_create_message_annotations(
             <c_amqp_definitions.message_annotations>value._c_value)
@@ -157,7 +156,7 @@ cdef class cMessageAnnotations(cAnnotations):
 
 cdef class cFields(cAnnotations):
 
-    cpdef create(self, AMQPValue value):
+    cpdef create(self, amqpvalue.AMQPValue value):
         self.destroy()
         self._c_value = c_amqp_definitions.amqpvalue_create_fields(<c_amqp_definitions.fields>value._c_value)
         self._validate()
@@ -165,7 +164,7 @@ cdef class cFields(cAnnotations):
 
 cdef class cFooter(cAnnotations):
 
-    cpdef create(self, AMQPValue value):
+    cpdef create(self, amqpvalue.AMQPValue value):
         self.destroy()
         self._c_value = c_amqp_definitions.amqpvalue_create_footer(<c_amqp_definitions.footer>value._c_value)
         self._validate()

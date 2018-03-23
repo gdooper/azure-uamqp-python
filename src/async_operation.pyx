@@ -8,15 +8,16 @@
 import logging
 
 # C imports
+cimport base
 cimport c_async_operation
 
 
 _logger = logging.getLogger(__name__)
 
 
-cdef class AsyncOperation(StructBase):
+cdef class AsyncOperation(base.StructBase):
 
-    cdef c_async_operation.ASYNC_OPERATION_HANDLE _c_value
+    #cdef c_async_operation.ASYNC_OPERATION_HANDLE _c_value
 
     def __cinit__(self):
         pass
@@ -28,7 +29,7 @@ cdef class AsyncOperation(StructBase):
     cpdef destroy(self):
         if <void*>self._c_value is not NULL:
             _logger.debug("Destroying {}".format(self.__class__.__name__))
-            c_async_operation.async_operation_destroy(self._c_value)
+            c_async_operation.async_operation_destroy(<c_async_operation.ASYNC_OPERATION_HANDLE>self._c_value)
             self._c_value = <c_async_operation.ASYNC_OPERATION_HANDLE>NULL
 
     cdef wrap(self, c_async_operation.ASYNC_OPERATION_HANDLE value):
@@ -37,5 +38,5 @@ cdef class AsyncOperation(StructBase):
         self._create()
 
     cpdef cancel(self):
-        if c_async_operation.async_operation_cancel(self._c_value) != 0:
+        if c_async_operation.async_operation_cancel(<c_async_operation.ASYNC_OPERATION_HANDLE>self._c_value) != 0:
             self._value_error()
