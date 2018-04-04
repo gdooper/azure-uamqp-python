@@ -37,9 +37,9 @@ sys.path.insert(0, pxd_inc_dir)
 include_dirs = [
     pxd_inc_dir,
     # azure-c-shared-utility inc
-    "./src/vendor/azure-c-shared-utility/pal/inc",
-    "./src/vendor/azure-c-shared-utility/inc",
-    "./src/vendor/azure-c-shared-utility/pal/windows" if is_win else "./src/vendor/azure-c-shared-utility/pal/linux",
+    "./src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/pal/inc",
+    "./src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/inc",
+    "./src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/pal/windows" if is_win else "./src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/pal/linux",
     # azure-uamqp-c inc
     "./src/vendor/azure-uamqp-c/inc",
 ]
