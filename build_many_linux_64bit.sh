@@ -21,8 +21,8 @@ make
 make install
 popd
 
-mkdir /data/cmakebuild
-pushd /data/cmakebuild
+mkdir /tmp/cmakebuild
+pushd /tmp/cmakebuild
 cmake28 /data/src/vendor/azure-uamqp-c \
     -Duse_openssl:bool=ON \
     -Duse_default_uuid:bool=ON \
