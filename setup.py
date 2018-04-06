@@ -8,14 +8,22 @@ import os
 import sys
 import re
 import distutils
-from setuptools import find_packages, setup
+import subprocess
+from setuptools import find_packages, setup, Extension
+from setuptools.command.build_ext import build_ext as build_ext_orig
 from distutils.extension import Extension
+from distutils import log as logger
 
 try:
     from Cython.Build import cythonize
     USE_CYTHON = True
 except ImportError:
     USE_CYTHON = False
+
+# If the C file doesn't exist and no Cython is available, die
+if not os.path.exists("uamqp/c_uamqp.c") and not USE_CYTHON:
+    raise ValueError("You need to install cython==0.27.3 in order to execute this setup.py if 'uamqp/c_uamqp.c' does not exists")
+
 
 supress_link_flags = os.environ.get("UAMQP_SUPPRESS_LINK_FLAGS", False)
 is_win = sys.platform.startswith('win')
@@ -46,8 +54,7 @@ include_dirs = [
 
 # Build unique source pyx
 
-c_uamqp_src = None
-if USE_CYTHON:
+def create_cython_file():
     content_includes = ""
     for f in os.listdir("./src"):
         if is_win and 'openssl' in f:
@@ -60,9 +67,76 @@ if USE_CYTHON:
     c_uamqp_src = os.path.join("uamqp", "c_uamqp.pyx")
     with open(c_uamqp_src, 'w') as lib_file:
         lib_file.write(content_includes)
-else:
-    c_uamqp_src = "uamqp/c_uamqp.c"
+    return c_uamqp_src
 
+# Compile uamqp
+# Inspired by https://stackoverflow.com/a/48015772/4074838
+
+class UAMQPExtension(Extension):
+
+    def __init__(self, name):
+        # don't invoke the original build_ext for this special extension
+        super(UAMQPExtension, self).__init__(name, sources=[])
+
+def create_folder_no_exception(foldername):
+    try:
+        os.makedirs(foldername)
+    except Exception: # Assume it's already there, and not impossible to create
+        pass
+
+class build_ext(build_ext_orig):
+
+    def run(self):
+        cmake_build_dir = None
+        for ext in self.extensions:
+            if isinstance(ext, UAMQPExtension):
+                self.build_cmake(eho surext)
+                # Now I have built in ext.cmake_build_dir
+                cmake_build_dir = self.cmake_build_dir
+            else:
+                ext.library_dirs += [
+                    cmake_build_dir,
+                    cmake_build_dir + "/deps/azure-c-shared-utility/"
+                ]
+        super(build_ext, self).run()
+
+    def build_cmake(self, ext):
+        cwd = os.getcwd()
+
+        # these dirs will be created in build_py, so if you don't have
+        # any python sources to bundle, the dirs will be missing
+        self.cmake_build_dir = self.build_temp + "/cmake"
+        create_folder_no_exception(self.cmake_build_dir)
+
+        extdir = self.get_ext_fullpath(ext.name)
+        create_folder_no_exception(extdir)
+
+        logger.info("will build uamqp in %s", self.cmake_build_dir)
+        os.chdir(cwd + "/" + self.cmake_build_dir)
+
+        # Configure
+        configure_command = [
+            "cmake",
+            cwd + "/src/vendor/azure-uamqp-c/",
+            "-Duse_openssl:bool=ON", 
+            # -Duse_default_uuid:bool=ON \ # Should we use libuuid in the system or light one?
+            # -Duse_builtin_httpapi:bool=ON \ # Should we use libcurl in the system or light one?
+            "-Dskip_samples:bool=ON", # Don't compile uAMQP samples binaries
+            "-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE" # ask for -fPIC
+        ]
+        joined_cmd = " ".join(configure_command)
+        logger.info("calling %s", joined_cmd)
+        subprocess.check_call(joined_cmd, shell=True, universal_newlines=True)
+
+        compile_command  = ["cmake", "--build", "."]
+        joined_cmd = " ".join(compile_command)
+        logger.info("calling %s", joined_cmd)
+        subprocess.check_call(joined_cmd, shell=True, universal_newlines=True)
+
+        os.chdir(cwd)
+
+        if USE_CYTHON:
+            create_cython_file()
 
 # Libraries and extra compile args
 
@@ -82,31 +156,46 @@ else:
     kwargs['extra_compile_args'] = ['-g', '-O0', "-std=gnu99", "-fPIC"]
     # SSL before crypto matters: https://bugreports.qt.io/browse/QTBUG-62692
     if not supress_link_flags:
-        kwargs['libraries'] = ['ssl', 'crypto', 'uuid', 'uamqp', 'aziotsharedutil']
+        kwargs['libraries'] = ['uamqp', 'aziotsharedutil', 'ssl', 'crypto', 'uuid']
+
+        # FIXME Do some clean up here
         kwargs['library_dirs'] = [
-            # FIXME just to simplify work in progress
-            '/tmp/cmakebuild',
-            '/tmp/cmakebuild/deps/azure-c-shared-utility/'
+            # '/tmp/cmakebuild',
+            # '/tmp/cmakebuild/deps/azure-c-shared-utility/'
         ]
-        # kwargs['extra_link_args'] = [
+
+        # FIXME Do some clean up here
+        kwargs['extra_link_args'] = [
         #     "/data/azure-uamqp-c/cmake/libuamqp.a",
         #     "/data/azure-uamqp-c/cmake/deps/azure-c-shared-utility/libaziotsharedutil.a",
-        #     "/usr/lib/x86_64-linux-gnu/libssl.so",
-        #     "/usr/lib/x86_64-linux-gnu/libcrypto.so",
-        #     "/usr/lib/x86_64-linux-gnu/libuuid.so"]
+        #  "/usr/lib/x86_64-linux-gnu/libssl.a",
+        #  "/usr/lib/x86_64-linux-gnu/libcrypto.a",
+        #     "/tmp/openssl/openssl-1.0.2o/libssl.a",
+        #     "/tmp/openssl/openssl-1.0.2o/libcrypto.a",
+        #     "/usr/lib/x86_64-linux-gnu/libuuid.so"
+        ]
+
+# If the C file doesn't exist, build the "c_uamqp.c" file
+# That's not perfect, since we build it on a "--help", but should be if cloned from source only.
+c_uamqp_src = "uamqp/c_uamqp.c"
+if not os.path.exists(c_uamqp_src):
+    c_uamqp_src = create_cython_file()
 
 sources = [
-    c_uamqp_src,
+    c_uamqp_src
 ]
 
 # Configure the extension
 
-extensions = [Extension(
+extensions = [
+    UAMQPExtension("cmake_uamqp"),
+    Extension(
         "uamqp.c_uamqp",
         sources=sources,
         include_dirs=include_dirs,
-        **kwargs)
-    ]
+        **kwargs
+    )
+]
 
 with open('README.rst', encoding='utf-8') as f:
     readme = f.read()
@@ -138,5 +227,8 @@ setup(
     zip_safe=False,
     include_package_data=True,
     packages=find_packages(exclude=["tests"]),
-    ext_modules = extensions
+    ext_modules = extensions,
+    cmdclass={
+        'build_ext': build_ext,
+    }    
 )

@@ -19,7 +19,7 @@ If you are running a Linux distro that does not support `ManyLinux1 <https://www
 .. code:: shell
 
     $ apt-get update
-    $ apt-get install -y build-essential libssl-dev python3-dev uuid-dev cmake python3-pip
+    $ apt-get install -y build-essential libssl-dev python3-dev uuid-dev cmake python3-pip libcurl4-openssl-dev pkg-config
     $ pip3 install uamqp --no-binary
 
 
