@@ -15,13 +15,14 @@ export LIBRARY_PATH="/opt/pyca/cryptography/openssl/lib"
 export OPENSSL_ROOT_DIR="/opt/pyca/cryptography/openssl"
 
 # Build the wheels
+cd /data
 for PYBIN in /opt/python/*/bin; do
 	$PYBIN/pip install cython==0.28.4 wheel;
-	$PYBIN/pip wheel /data/ -w wheelhouse;
+	$PYBIN/python setup.py bdist_wheel -d /wheelhouse;
 	rm -rf build/
 done;
 
 # Repair the wheels
-for WHL in wheelhouse/*; do
+for WHL in /wheelhouse/*; do
 	auditwheel repair $WHL -w /data/wheelhouse/;
 done;
